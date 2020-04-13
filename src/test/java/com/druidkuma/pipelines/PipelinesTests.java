@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -30,7 +31,7 @@ public class PipelinesTests {
     }
 
     @Test
-    public void singleSanityPipelinesTest() throws IOException {
+    public void singleSanityPipelinesTest() throws IOException, TimeoutException {
         //Given
         PipelineDescriptor pipelineDescriptor = fileReader.readObjectFromClasspath("pipeline.json", PipelineDescriptor.class);
         Map<String, Object> dataObject = fileReader.readObjectFromClasspath("initial-test-object.json",
@@ -39,12 +40,25 @@ public class PipelinesTests {
         //When
         DefaultProcessorFactory processorFactory = new DefaultProcessorFactory();
         PipelineExecutor pipelineExecutor = new PipelineExecutor(processorFactory);
-        pipelineExecutor.transform(pipelineDescriptor, dataObject);
+        pipelineExecutor.transform(pipelineDescriptor, dataObject, 100L);
 
         //Then
         assertEquals(dataObject.keySet().size(), 5);
         assertEquals(dataObject.get("firstName"), "George");
         assertEquals(dataObject.get("numOfFields"), 4);
+    }
+
+    @Test(expected = TimeoutException.class)
+    public void testTimeoutExceptionIsThrownWhenPipelineTakesTooMuchTimeToExecute() throws IOException, TimeoutException {
+        //Given
+        PipelineDescriptor pipelineDescriptor = fileReader.readObjectFromClasspath("pipeline.json", PipelineDescriptor.class);
+        Map<String, Object> dataObject = fileReader.readObjectFromClasspath("initial-test-object.json",
+                new TypeReference<Map<String, Object>>() {});
+
+        //When
+        DefaultProcessorFactory processorFactory = new DefaultProcessorFactory();
+        PipelineExecutor pipelineExecutor = new PipelineExecutor(processorFactory);
+        pipelineExecutor.transform(pipelineDescriptor, dataObject, 0L);
     }
 
 }
